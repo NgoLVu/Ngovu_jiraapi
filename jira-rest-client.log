@@ -1,0 +1,4 @@
+[2023-05-18T15:55:38.932989+07:00] JiraClient.ERROR: CURL Error: http response=0, Could not resolve proxy: your-proxy-server [] []
+[2023-05-18T15:57:45.798315+07:00] JiraClient.ERROR: CURL Error: http response=0, Could not resolve proxy: your-proxy-server [] []
+[2023-05-19T06:51:50.745197+07:00] JiraClient.ERROR: CURL Error: http response=404,  [] []
+[2023-05-21T23:48:52.145783+07:00] JiraClient.ERROR: CURL Error: http response=0,  [] []
