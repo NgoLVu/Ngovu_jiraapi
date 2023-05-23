@@ -30,14 +30,14 @@ if( ! function_exists('create_project')){
 				->setProjectTypeKey('software')
 				->setProjectTemplateKey('com.atlassian.jira-core-project-templates:jira-core-project-management')
 				->setDescription('This is project')
-				->setLeadName('lesstif')
+				->setLeadName('Ngovu')
 				->setUrl('http://localcodeign.com/')
 				->setAssigneeType('PROJECT_LEAD')
-//				->setAvatarId(10130)
-//				->setIssueSecurityScheme(10000)
-//				->setPermissionScheme(10100)
-//				->setNotificationScheme(10100)
-//				->setCategoryId(10100)
+				->setAvatarId(10130)
+				->setIssueSecurityScheme(10000)
+				->setPermissionScheme(10100)
+				->setNotificationScheme(10100)
+				->setCategoryId(10100)
 ;
 
 			$proj = new ProjectService();
@@ -54,17 +54,19 @@ if( ! function_exists('create_project')){
 	}
 }
 if( ! function_exists('updateproject')){
-	function updateproject($projectID,$setname){
-		try {
+	function updateproject($projectID){
+//		try {
 			$p = new Project();
 
-			$p->setName($setname)
+			$p->setName('XXX2')
 				->setProjectTypeKey('software')
-				->setProjectTemplateKey('com.atlassian.jira-software-project-templates:jira-software-project-management')
+				->setProjectTemplateKey('com.atlassian.servicedesk:itil-v2-service-desk-project')
 				->setDescription('Updated Example Project description')
-				->setLead('Ngovu')
-////				->setUrl('http://new.example.com')
-				->setAssigneeType('UNASSIGNED')
+				->setleadAccountId('712020:30552601-5816-4298-b86a-e59cd7e44d98')
+
+//				->setUrl('https://localcodeign.atlassian.net/jira/software/projects/XXX1/')
+				->setAssigneeType('PROJECT_LEAD')
+				->setAvatarId(10130)
 			;
 
 			$proj = new ProjectService();
@@ -72,9 +74,10 @@ if( ! function_exists('updateproject')){
 			$pj = $proj->updateProject($p, $projectID);
 
 			var_dump($pj);
-		} catch (JiraRestApi\JiraException $e) {
-			print('Error Occured! ' . $e->getMessage());
-		}
+			echo "success";
+//		} catch (JiraRestApi\JiraException $e) {
+//			print('Error Occured! ' . $e->getMessage());
+//		}
 	}
 }
 if( ! function_exists('deleteproject')){

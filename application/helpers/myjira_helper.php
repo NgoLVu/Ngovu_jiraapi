@@ -12,7 +12,18 @@ use JiraRestApi\User\UserService;
 use JiraRestApi\Issue\IssueField;
 use JiraRestApi\Issue\Worklog;
 use JiraRestApi\Issue\Transition;
+use JiraRestApi\Issue\JqlQuery;
+use JiraRestApi\Issue\JqlFunction;
+use JiraRestApi\IssueLink\IssueLink;
+use JiraRestApi\IssueLink\IssueLinkService;
+use JiraRestApi\Issue\RemoteIssueLink;
+use JiraRestApi\Board\BoardService;
+use JiraRestApi\Attachment\AttachmentService;
+use JiraRestApi\Group\GroupService;
+use JiraRestApi\Group\Group;
+use JiraRestApi\Priority\PriorityService;
 
+use JiraRestApi\Epic\EpicService;
 if ( ! function_exists('getIssue'))
 {
 	function getIssue($issueKey)
@@ -186,6 +197,45 @@ if (!function_exists('addAttachment')) {
 		}
 	}
 }
+if (!function_exists('getAttachment')) {
+	function getAttachment($attachmentId)
+	{
+		try {
+			$atts = new AttachmentService();
+			$att = $atts->get($attachmentId);
+			var_dump($att);
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if(!function_exists('getAttachment_save_outDir')){
+	function getAttachment_save_outDir($attachmentId){
+		try {
+			$outDir = 'attachment_dir';
+
+			$atts = new AttachmentService();
+			$att = $atts->get($attachmentId, $outDir, $overwrite = true);
+
+			var_dump($att);
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if (!function_exists('removeAttachment')) {
+	function removeAttachment($attachmentId)
+	{
+		try {
+			$atts = new AttachmentService();
+
+			$atts->remove($attachmentId);
+			echo "remove attachment success";
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
 if ( ! function_exists('create_sub_task')){
 	function create_sub_task($projectKey,$summary,$desctription,$subTask,$issueKey){
 		try{
@@ -245,6 +295,114 @@ if ( ! function_exists('change_assignee_by_accountid')){
 		}
 	}
 }
+//Perform an advanced search, use JQL
+if ( ! function_exists('Simple_quuery')){
+	function Simple_quuery($jql){
+//		$jql = 'project not in (TEST)  and assignee = currentUser() and status in (Resolved, closed)';
+		try {
+			$issueService = new IssueService();
+
+			$ret = $issueService->search($jql);
+			var_dump($ret);
+		} catch (JiraRestApi\JiraException $e) {
+			$this->assertTrue(false, 'testSearch Failed : '.$e->getMessage());
+		}
+	}
+}
+if ( ! function_exists('Simple_quuery_with_linkedIssue')){
+	function Simple_quuery_with_linkedIssue($issueKey){
+// Searches for issues that are linked to an issue. You can restrict the search to links of a particular type.
+//		try {
+//			$linkedIssue = JqlFunction::linkedIssues($issueKey, $operator, 'is blocked by');
+//
+//			$issueService = new IssueService();
+//
+//			$ret = $issueService->search($linkedIssue->expression);
+//
+//			var_dump($ret);
+//		} catch (JiraException $e) {
+//			print('Error Occured! ' . $e->getMessage());
+//		}
+
+// Searches for epics and subtasks. If the issue is not an epic, the search returns all subtasks for the issue.
+		try {
+			$linkedIssue = JqlFunction::linkedissue($issueKey);
+
+			$issueService = new IssueService();
+
+			$ret = $issueService->search($linkedIssue->expression);
+
+			var_dump($ret);
+		} catch (JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if ( ! function_exists('JQL_with_pagination')){
+	function JQL_with_pagination($jql){
+//		$jql = 'project not in (TEST)  and assignee = currentUser() and status in (Resolved, closed)';
+
+		try {
+			$issueService = new IssueService();
+
+			$pagination = -1;
+
+			$startAt = 0;	//the index of the first issue to return (0-based)
+			$maxResult = 3;	// the maximum number of issues to return (defaults to 50).
+			$totalCount = -1;	// the number of issues to return
+
+			// first fetch
+			$ret = $issueService->search($jql, $startAt, $maxResult);
+			$totalCount = $ret->total;
+
+			// do something with fetched data
+			foreach ($ret->issues as $issue) {
+				print (sprintf('%s %s ', $issue->key, $issue->fields->summary));
+			}
+
+			// fetch remained data
+			$page = $totalCount / $maxResult;
+
+			for ($startAt = 1; $startAt < $page; $startAt++) {
+				$ret = $issueService->search($jql, $startAt * $maxResult, $maxResult);
+				echo "<br>";
+				print ('Paging '.$startAt);
+				echo "<br>";
+				print ('-------------------');
+				echo "<br>";
+				foreach ($ret->issues as $issue) {
+					print (sprintf('%s %s ', $issue->key, $issue->fields->summary));
+					echo "<br>";
+				}
+			}
+		} catch (JiraRestApi\JiraException $e) {
+			$this->assertTrue(false, 'testSearch Failed : '.$e->getMessage());
+		}
+	}
+}
+if ( ! function_exists('JQL_with_class')){
+	function JQL_with_class($project,$type,$status){
+		try {
+			$jql = new JqlQuery();
+
+			$jql->setProject($project)
+				->setType($type)
+				->setStatus($status)
+				->setAssignee(JqlFunction::currentUser());
+//				->setCustomField('My Custom Field', 'value')
+//				->addIsNotNullExpression('due');
+
+			$issueService = new IssueService();
+
+			$ret = $issueService->search($jql->getQuery());
+
+			var_dump($ret);
+		} catch (JiraRestApi\JiraException $e) {
+			$this->assertTrue(false, 'testSearch Failed : '.$e->getMessage());
+		}
+	}
+}
+
 if ( ! function_exists('read_property_issue')){
 	function read_property_issue($issueKey){
 		try {
@@ -390,32 +548,6 @@ if( ! function_exists('create_custom_field')){
 
 	}
 }
-if( ! function_exists('Get_epic_info')){
-	function Get_epic_info(){
-		try {
-			$epic_service = new JiraRestApi\Epic\EpicService();
-			$epic_id = 1;
-			$epic = $epic_service->getEpic($epic_id);
-
-			var_dump($epic);
-		} catch (JiraRestApi\JiraException $e) {
-			print('Error Occured! ' . $e->getMessage());
-		}
-	}
-}
-if( ! function_exists('get_user_info')){
-	function get_user_info($username){
-		try {
-			$us = new UserService();
-
-			$user = $us->get(['username' =>$username]);
-
-			var_dump($user);
-		} catch (JiraRestApi\JiraException $e) {
-			print('Error Occured! ' . $e->getMessage());
-		}
-	}
-}
 if( ! function_exists('add_comment')){
 	function add_comment($issueKey,$comments){
 //		$issueKey = 'TEST-879';
@@ -523,20 +655,22 @@ if( ! function_exists('get_transition')){
 		}
 	}
 }
+// lam viec voi user
 if( ! function_exists('create_user')){
-	function create_user(){
+	function create_user($username,$password,$email,$displayname){
 		try {
 			$us = new UserService();
 
 			// create new user
 			$user = $us->create([
-				'name'=>'charlie',
-				'password' => 'abracadabra',
-				'emailAddress' => 'charlie@atlassian.com',
-				'displayName' => 'Charlie of Atlassian',
+				'name'=>$username,
+				'password' => $password,
+				'emailAddress' => $email,
+				'displayName' => $displayname,
 			]);
 
 			var_dump($user);
+			echo "create user success";
 		} catch (JiraRestApi\JiraException $e) {
 			print('Error Occured! ' . $e->getMessage());
 		}
@@ -544,44 +678,44 @@ if( ! function_exists('create_user')){
 }
 if( ! function_exists('get_user_info')){
 	function get_user_info($username){
-		try {
+//		try {
 			$us = new UserService();
 
-			$user = $us->get(['username' => $username]);
+			$user = $us->get(['accountId' => $username]);
 
 			var_dump($user);
-		} catch (JiraRestApi\JiraException $e) {
-			print('Error Occured! ' . $e->getMessage());
-		}
+//		} catch (JiraRestApi\JiraException $e) {
+//			print('Error Occured! ' . $e->getMessage());
+//		}
 	}
 }
-if( ! function_exists('find_users')){
-	function find_user(){
+if( ! function_exists('find_user_in_project')){
+	function find_user_in_project($projectkey){
 		try {
 			$us = new UserService();
 
 			$paramArray = [
 				//'username' => null,
-				'project' => 'TEST',
+				'project' => $projectkey,
 				//'issueKey' => 'TEST-1',
 				'startAt' => 0,
 				'maxResults' => 50, //max 1000
 				//'actionDescriptorId' => 1,
 			];
-
 			$users = $us->findAssignableUsers($paramArray);
+			var_dump($users);
 		} catch (JiraRestApi\JiraException $e) {
 			print('Error Occured! ' . $e->getMessage());
 		}
 	}
 }
 if( ! function_exists('find_user')){
-	function find_user(){
+	function find_user($username){
 		try {
 			$us = new UserService();
 
 			$paramArray = [
-				'username' => '.', // get all users.
+				'accountId' => $username, // get all users.
 				'startAt' => 0,
 				'maxResults' => 1000,
 				'includeInactive' => true,
@@ -590,6 +724,23 @@ if( ! function_exists('find_user')){
 
 			// get the user info.
 			$users = $us->findUsers($paramArray);
+			var_dump($users);
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if( ! function_exists('find_user_by_query')){
+	function find_user_by_query(){
+		try {
+			$us = new UserService();
+
+			$paramArray = [
+				'query' => 'is watcher of TEST',
+			];
+
+			$users = $us->findUsersByQuery($paramArray);
+			var_dump($users);
 		} catch (JiraRestApi\JiraException $e) {
 			print('Error Occured! ' . $e->getMessage());
 		}
@@ -600,7 +751,7 @@ if( ! function_exists('delete_user')){
 		try {
 			$us = new UserService();
 
-			$paramArray = ['username' => $username];
+			$paramArray = ['accountId' => $username];
 
 			$users = $us->deleteUser($paramArray);
 		} catch (JiraRestApi\JiraException $e) {
@@ -609,18 +760,18 @@ if( ! function_exists('delete_user')){
 	}
 }
 if(! function_exists('update_user')){
-	function update_user(){
+	function update_user($username,$password,$email,$displayname){
 		try {
 			$us = new UserService();
 
-			$paramArray = ['username' => 'user@example.com'];
+			$paramArray = ['accountId' => $username];
 
 			// create new user
 			$user = [
-				'name'=>'charli',
-				'password' => 'abracada',
-				'emailAddress' => 'charli@atlassian.com',
-				'displayName' => 'Charli of Atlassian',
+				'name'=>$username,
+				'password' => $password,
+				'emailAddress' => $email,
+				'displayName' => $displayname,
 			];
 
 			$updatedUser = $us->update($paramArray, $user);
@@ -628,6 +779,265 @@ if(! function_exists('update_user')){
     var_dump($updatedUser);
 
 } catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+// tao mot group
+if( ! function_exists('create_group')){
+	function create_group(){
+		try {
+			$g = new Group();
+
+			$g->name = 'Test group for REST API TEST';
+
+			$gs = new GroupService();
+			$ret = $gs->createGroup($g);
+
+			var_dump($ret);
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if( ! function_exists('get_user_from_group')){
+	function get_user_from_group(){
+		try {
+			$queryParam = [
+				'groupname' => 'Test group for REST API',
+				'includeInactiveUsers' => true, // default false
+				'startAt' => 0,
+				'maxResults' => 50,
+			];
+
+			$gs = new GroupService();
+
+			$ret = $gs->getMembers($queryParam);
+
+			// print all users in the group
+			foreach($ret->values as $user) {
+				var_dump($user);
+			}
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if( ! function_exists('add_user_from_group')){
+	function add_user_from_group(){
+		try {
+			$groupName  = 'Test group for REST API';
+			$userName = '63419d59409249995eed188e';
+
+			$gs = new GroupService();
+
+			$ret = $gs->addUserToGroup($groupName, $userName);
+
+			// print current state of the group.
+			print_r($ret);
+
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if( ! function_exists('remove_user_from_group')){
+	function remove_user_from_group(){
+		try {
+			$groupName  = '한글 그룹 name';
+			$userName = 'lesstif';
+
+			$gs = new GroupService();
+
+			$gs->removeUserFromGroup($groupName, $userName);
+
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+//tao moi priorty
+if( ! function_exists('get_all_priorty_list')){
+	function get_all_priorty_list(){
+		try {
+			$ps = new PriorityService();
+
+			$p = $ps->getAll();
+
+			var_dump($p);
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if( ! function_exists('get_priorty')){
+	function get_priorty($priortyID){
+		try {
+			$ps = new PriorityService();
+
+			$p = $ps->get($priortyID);
+			var_dump($p);
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if(! function_exists('get_issue_link')){ // lấy tất cả issue link
+	function get_issue_link(){
+		try {
+			$ils = new IssueLinkService();
+
+			$ret = $ils->getIssueLinkTypes();
+
+			var_dump($ret);
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if(! function_exists('create_issue_link')){ //tạo mới issue link
+	function create_issue_link($InwardIssue,$outwardissue,$linktypename,$comment){
+		try {
+			$il = new IssueLink();
+
+			$il->setInwardIssue($InwardIssue)
+				->setOutwardIssue($outwardissue)
+				->setLinkTypeName($linktypename )
+				->setComment($comment);
+
+			$ils = new IssueLinkService();
+
+			$ret = $ils->addIssueLink($il);
+			echo "Create issue link success";
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if(! function_exists('get_remove_issue_link')){ // lấy tất cả remove issue link
+	function get_remove_issue_link($issueKey){
+		try {
+			$issueService = new IssueService();
+
+			$rils = $issueService->getRemoteIssueLink($issueKey);
+
+			// rils is array of RemoteIssueLink classes
+			var_dump($rils);
+		} catch (JiraRestApi\JiraException $e) {
+			$this->assertTrue(false, $e->getMessage());
+		}
+	}
+}
+if(! function_exists('create_remove_issue_link')){
+	function create_remove_issue_link($issueKey){
+		try {
+			$issueService = new IssueService();
+
+			$ril = new RemoteIssueLink();
+
+			$ril->setUrl('http://www.mycompany.com/support?id=1')
+				->setTitle('Remote Link Title')
+				->setRelationship('causes')
+				->setSummary('Crazy customer support issue')
+			;
+
+			$rils = $issueService->createOrUpdateRemoteIssueLink($issueKey, $ril);
+
+			// rils is array of RemoteIssueLink classes
+			var_dump($rils);
+			echo "Create remove issue link success";
+		} catch (JiraRestApi\JiraException $e) {
+			$this->assertTrue(false, 'Create Failed : '.$e->getMessage());
+		}
+	}
+}
+if(! function_exists('get_board_list')){
+	function get_board_list(){
+		try {
+			$board_service = new BoardService();
+			$board = $board_service->getBoardList();
+
+			var_dump($board);
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if(! function_exists('get_board_info')){
+	function get_board_info(){
+		try {
+			$board_service = new BoardService();
+			$board_id = 1;
+			$board = $board_service->getBoard($board_id);
+
+			var_dump($board);
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if(! function_exists('get_board_issue')){
+	function get_board_issue(){
+		try {
+			$board_service = new BoardService();
+			$board_id = 1;
+			$issues = $board_service->getBoardIssues($board_id, [
+				'maxResults' => 500,
+				'jql' => urlencode('status != Closed'),
+			]);
+
+			foreach ($issues as $issue) {
+				var_dump($issue);
+			}
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if(! function_exists('get_board_epics')){
+	function get_board_epics(){
+		try {
+			$board_service = new JiraRestApi\Board\BoardService();
+			$board_id = 1;
+			$epics = $board_service->getBoardEpics($board_id, [
+				'maxResults' => 500,
+			]);
+
+			foreach ($epics as $epic) {
+				var_dump($epic);
+			}
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if( ! function_exists('Get_epic_info')){
+	function Get_epic_info(){
+		try {
+			$epic_service = new JiraRestApi\Epic\EpicService();
+			$epic_id = 1;
+			$epic = $epic_service->getEpic($epic_id);
+
+			var_dump($epic);
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if( ! function_exists('Get_epic_issue')){
+	function Get_epic_issue($epic_id){
+		try {
+			$epic_service = new JiraRestApi\Epic\EpicService();
+//			$epic_id = 1;
+			$issues = $epic_service->getEpicIssues($epic_id, [
+				'maxResults' => 500,
+				'jql' => urlencode('status != Closed'),
+			]);
+
+			foreach ($issues as $issue) {
+				var_dump($issue);
+			}
+		} catch (JiraRestApi\JiraException $e) {
 			print('Error Occured! ' . $e->getMessage());
 		}
 	}
