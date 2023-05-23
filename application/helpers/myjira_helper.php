@@ -11,6 +11,8 @@ use JiraRestApi\Issue\Comment;
 use JiraRestApi\User\UserService;
 use JiraRestApi\Issue\IssueField;
 use JiraRestApi\Issue\Worklog;
+use JiraRestApi\Issue\Transition;
+
 if ( ! function_exists('getIssue'))
 {
 	function getIssue($issueKey)
@@ -80,8 +82,8 @@ if ( ! function_exists('create_issue'))
 		}
 	}
 }
-if (!function_exists('updateIssue')) {
-	function updateIssue($issueKey,$assigneeName,$issueType,$description)
+if (! function_exists('updateIssue')) {
+	function updateIssue($issueKey,$assigneeName,$issueType,$description,$summary)
 	{
 		$issueField = new IssueField(true);
 		$issueField->setAssigneeNameAsString($assigneeName)
@@ -97,7 +99,57 @@ if (!function_exists('updateIssue')) {
 		echo "Jira issue create success!";
 	}
 }
-if (!function_exists('deleteIssues')) {
+if (! function_exists('update_label')){
+	function update_label($issueKey){
+		try {
+			$issueService = new IssueService();
+
+			$addLabels = [
+				'triaged', 'customer-request', 'sales-request'
+			];
+
+			$removeLabel = [
+				'will-be-remove', 'this-label-is-typo'
+			];
+
+			$ret = $issueService->updateLabels($issueKey,
+				$addLabels,
+				$removeLabel,
+				$notifyUsers = false
+			);
+
+			var_dump($ret);
+		} catch (JiraRestApi\JiraException $e) {
+			$this->assertTrue(false, 'updateLabels Failed : '.$e->getMessage());
+		}
+	}
+}
+if (! function_exists('update_fix_versions')){
+	function update_fix_versions($issueKey){
+		try {
+			$issueService = new IssueService();
+
+			$addVersions = [
+				'1.1.1', 'named-version'
+			];
+
+			$removeVersions = [
+				'1.1.0', 'old-version'
+			];
+
+			$ret = $issueService->updateFixVersions($issueKey,
+				$addVersions,
+				$removeVersions,
+				$notifyUsers = false
+			);
+
+			var_dump($ret);
+		} catch (JiraRestApi\JiraException $e) {
+			$this->assertTrue(false, 'updateFixVersions Failed : '.$e->getMessage());
+		}
+	}
+}
+if (! function_exists('deleteIssues')) {
 	function deleteIssues($issuekey)
 	{
 //		$issueKey = $issuekey;
@@ -134,6 +186,90 @@ if (!function_exists('addAttachment')) {
 		}
 	}
 }
+if ( ! function_exists('create_sub_task')){
+	function create_sub_task($projectKey,$summary,$desctription,$subTask,$issueKey){
+		try{
+		$issueField = new IssueField();
+
+		$issueField->setProjectKey($projectKey)
+			->setSummary($summary)
+//			->setAssigneeNameAsString('lesstif')
+//			->setPriorityNameAsString('Critical')
+			->setDescription($desctription)
+//			->addVersion('1.0.1')
+//			->addVersion('1.0.3')
+//			->setIssueTypeAsString($subTask)  //issue type must be Sub-task
+//			->setParentKeyOrId($issueKey)  //Issue Key
+		;
+
+		$issueService = new IssueService();
+
+		$ret = $issueService->create($issueField);
+
+		//If success, Returns a link to the created sub task.
+		var_dump($ret);
+	} catch (JiraRestApi\JiraException $e) {
+		print('Error Occured! ' . $e->getMessage());
+	}
+	}
+}
+if ( ! function_exists('change_assignee')){
+	function change_assignee($issueKey,$assignee){
+		try {
+			$issueService = new IssueService();
+
+			// if assignee is -1, automatic assignee used.
+			// A null assignee will remove the assignee.
+//			$assignee = 'newAssigneeName';
+
+			$ret = $issueService->changeAssignee($issueKey, $assignee);
+
+			var_dump($ret);
+		} catch (JiraRestApi\JiraException $e) {
+			$this->assertTrue(FALSE, 'Change Assignee Failed : ' . $e->getMessage());
+		}
+	}
+}
+if ( ! function_exists('change_assignee_by_accountid')){
+	function change_assignee_by_accountid($issueKey,$accountID){
+		try {
+			$issueService = new IssueService();
+
+//			$accountId = 'usre-account-id';
+
+			$ret = $issueService->changeAssigneeByAccountId($issueKey, $accountID);
+
+			var_dump($ret);
+		} catch (JiraRestApi\JiraException $e) {
+			$this->assertTrue(FALSE, 'Change Assignee Failed : ' . $e->getMessage());
+		}
+	}
+}
+if ( ! function_exists('read_property_issue')){
+	function read_property_issue($issueKey){
+		try {
+			$issueService = new IssueService();
+			$property = $issueService->getProperty($issueKey, '');
+			var_dump($property);
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+if ( ! function_exists('write_property_issue')){
+	function write_property_issue($issueKey){
+		try {
+			$issueService = new IssueService();
+			$property = new Property();
+			$property->value = "- First entry\n- second entry";
+			$issueService->setProperty($issueKey, $property);
+		} catch (JiraRestApi\JiraException $e) {
+			print('Error Occured! ' . $e->getMessage());
+		}
+	}
+}
+
+
 if ( ! function_exists('Issue_time_tracking')){
 	function Issue_time_tracking($issueKey){
 //		$issueKey = 'TEST-961';
@@ -217,161 +353,6 @@ if ( ! function_exists('edit_worklog')){
 		}
 	}
 }
-if ( ! function_exists('Get_Project_Info'))
-{
-	function Get_Project_Info($project)
-	{
-		try {
-			$proj = new ProjectService();
-
-			$p = $proj->get($project);
-
-			var_dump($p);
-		} catch (JiraRestApi\JiraException $e) {
-			print('Error Occured! ' . $e->getMessage());
-		}
-	}
-}
-if( ! function_exists('Get_All_Field_List')){
-	function Get_All_Field_List(){
-		try {
-			$fieldService = new FieldService();
-
-			// return custom field only.
-			$ret = $fieldService->getAllFields(Field::CUSTOM);
-
-			var_dump($ret);
-		} catch (JiraRestApi\JiraException $e) {
-			$this->assertTrue(false, 'testSearch Failed : '.$e->getMessage());
-		}
-	}
-}
-if( ! function_exists('createproject')){
-	function createproject()
-	{
-		try {
-			$p = new Project();
-
-			$p->setKey('EXMPL')
-				->setName('XXXXX1')
-				->setProjectTypeKey('software')
-				->setProjectTemplateKey('com.atlassian.jira-core-project-templates:jira-core-project-management')
-				->setDescription('This is an example project')
-				->setLeadName('ngovu')
-				->setUrl('http://localcodeign.com/')
-				->setAssigneeType('PROJECT_LEAD')
-				->setAvatarId(10130)
-				->setIssueSecurityScheme(10000)
-				->setPermissionScheme(10100)
-				->setNotificationScheme(10100)
-				->setCategoryId(10100);
-
-			$proj = new ProjectService();
-
-			$pj = $proj->createProject($p);
-
-			// 'http://example.com/rest/api/2/project/10042'
-			var_dump($pj->self);
-			// 10042
-			var_dump($pj->id);
-		} catch (JiraRestApi\JiraException $e) {
-			print('Error Occured! ' . $e->getMessage());
-		}
-	}
-}
-if( ! function_exists('updateproject')){
-	function updateproject(){
-		try {
-			$p = new Project();
-
-			$p->setName('Updated Example')
-				->setProjectTypeKey('software')
-				->setProjectTemplateKey('com.atlassian.jira-software-project-templates:jira-software-project-management')
-				->setDescription('Updated Example Project description')
-				->setLead('new-leader')
-				->setUrl('http://new.example.com')
-				->setAssigneeType('UNASSIGNED')
-			;
-
-			$proj = new ProjectService();
-
-			$pj = $proj->updateProject($p, 'EX');
-
-			var_dump($pj);
-		} catch (JiraRestApi\JiraException $e) {
-			print('Error Occured! ' . $e->getMessage());
-		}
-	}
-}
-if( ! function_exists('deleteproject')){
-	function deleteproject($project)
-	{
-		try {
-			$proj = new ProjectService();
-
-			$pj = $proj->deleteProject($project);
-
-			var_dump($pj);
-		} catch (JiraRestApi\JiraException $e) {
-			print('Error Occured! ' . $e->getMessage());
-		}
-	}
-}
-if( ! function_exists('get_all_project_list')){
-	function get_all_project_list(){
-		try {
-			$proj = new ProjectService();
-
-			$prjs = $proj->getAllProjects();
-
-			foreach ($prjs as $p) {
-//				echo sprintf('Project Key:%s, Id:%s, Name:%s, projectCategory: %s\n',
-//					$p->key, $p->id, $p->name, $p->projectCategory['name']
-//				);
-				var_dump($p);
-			}
-		} catch (JiraRestApi\JiraException $e) {
-			print('Error Occured! ' . $e->getMessage());
-		}
-	}
-}
-if( ! function_exists('Get_Project_Components')){
-	function Get_Project_Components(){
-		try {
-			$proj = new ProjectService();
-
-			$prjs = $proj->getAllProjects();
-
-			// Extract and show Project Components for every Jira Project
-			foreach ($prjs as $p) {
-				var_export($proj->getProjectComponents($p->id));
-			}
-		} catch (JiraRestApi\JiraException $e) {
-			print('Error Occured! ' . $e->getMessage());
-		}
-	}
-}
-if( ! function_exists('Get_project_type')){
-	function Get_project_type(){
-		try {
-			$proj = new ProjectService();
-
-			// get all project type
-			$prjtyps = $proj->getProjectTypes();
-
-			foreach ($prjtyps as $pt) {
-				var_dump($pt);
-			}
-
-			// get specific project type.
-			$pt = $proj->getProjectType('software');
-			var_dump($pt);
-
-		} catch (JiraRestApi\JiraException $e) {
-			print('Error Occured! ' . $e->getMessage());
-		}
-	}
-}
 if( ! function_exists('get_All_Fields')){
 	function get_All_Fields(){
 		try {
@@ -389,11 +370,11 @@ if( ! function_exists('get_All_Fields')){
 if( ! function_exists('create_custom_field')){
 	function create_custom_field()
 	{
-//		try {
+		try {
 			$field = new Field();
 
 			$field->setName('XXXX1')
-				->setDescription('Custom field for picking groups')
+//				->setDescription('Custom field for picking groups')
 				->setDescription('mo ta ')
 				->setType('com.atlassian.jira.plugin.system.customfieldtypes:grouppicker')
 				->setSearcherKey('com.atlassian.jira.plugin.system.customfieldtypes:grouppickersearcher');
@@ -403,33 +384,10 @@ if( ! function_exists('create_custom_field')){
 			$ret = $fieldService->create($field);
 
 			var_dump($ret);
-//		} catch (JiraRestApi\JiraException $e) {
-//			$this->assertTrue(false, 'Field Create Failed : '.$e->getMessage());
-//		}
+		} catch (JiraRestApi\JiraException $e) {
+			$this->assertTrue(false, 'Field Create Failed : '.$e->getMessage());
+		}
 
-	}
-}
-if( ! function_exists('get_pagenated_project_versions')){
-	function get_pagenated_project_versions($project){
-//		try {
-			$param = [
-				'startAt' => 0,
-				'maxResults' => 10,
-				'orderBy' => 'name',
-				//'expand' => null,
-			];
-
-			$proj = new ProjectService();
-
-			$vers = $proj->getVersionsPagenated($project, $param);
-
-			foreach ($vers as $v) {
-				// $v is  JiraRestApi\Issue\Version
-				var_dump($v);
-			}
-//		} catch (JiraRestApi\JiraException $e) {
-//			print('Error Occured! ' . $e->getMessage());
-//		}
 	}
 }
 if( ! function_exists('Get_epic_info')){
@@ -459,30 +417,23 @@ if( ! function_exists('get_user_info')){
 	}
 }
 if( ! function_exists('add_comment')){
-	function add_comment($issueKey){
+	function add_comment($issueKey,$comments){
 //		$issueKey = 'TEST-879';
 
-//		try {
+		try {
 			$comment = new Comment();
-		$body = <<<COMMENT
-Adds a new comment to an issue.
-* Bullet 1
-* Bullet 2
-** sub Bullet 1
-** sub Bullet 2
-* Bullet 3
-COMMENT;
+		$body = $comments;
 		$comment->setBody($body)
-			->setVisibilityAsString('role', 'Users');
+//			->setVisibilityAsString('role', 'Users');
 		;
 
 
 			$issueService = new IssueService();
 			$ret = $issueService->addComment($issueKey, $comment);
 			print_r($ret);
-//		} catch (JiraRestApi\JiraException $e) {
-//			$this->assertTrue(FALSE, 'add Comment Failed : ' . $e->getMessage());
-//		}
+		} catch (JiraRestApi\JiraException $e) {
+			$this->assertTrue(FALSE, 'add Comment Failed : ' . $e->getMessage());
+		}
 	}
 }
 if( ! function_exists('get_comment')){
@@ -539,6 +490,36 @@ if( ! function_exists('update_comment')){
 
 		} catch (JiraRestApi\JiraException $e) {
 			$this->assertTrue(false, 'Update comment Failed : '.$e->getMessage());
+		}
+	}
+}
+if( ! function_exists('set_transition')){
+	function set_transition($issueKey,$name,$comment){
+		try {
+			$transition = new Transition();
+			$transition->setTransitionName($name);
+			$transition->setCommentBody($comment);
+
+			$issueService = new IssueService();
+
+			$issueService->transition($issueKey, $transition);
+		} catch (JiraRestApi\JiraException $e) {
+			$this->assertTrue(FALSE, 'add Comment Failed : ' . $e->getMessage());
+		}
+	}
+}
+if( ! function_exists('get_transition')){
+	function get_transition($issueKey,$name){
+		try {
+			$transition = new Transition();
+			$transition->setTransitionName($name);
+			$transition->setCommentBody($comment);
+
+			$issueService = new IssueService();
+
+			$issueService->transition($issueKey, $transition);
+		} catch (JiraRestApi\JiraException $e) {
+			$this->assertTrue(FALSE, 'add Comment Failed : ' . $e->getMessage());
 		}
 	}
 }
